@@ -1,0 +1,104 @@
+Data Customer;
+Input CustID CustName $ BirthDate Date10. Gender $;
+Datalines;
+1 Jack 1-1-1980 M
+2 John 2-3-1982 M
+3 Mary 1-5-1976 F
+4 Kevin 10-9-1964 M
+5 Jane 7-4-1990 F
+;
+
+Data Deals
+Input DealID DealType $ DealStatus $;
+Dataline;
+100 Local Active
+200 Local Active
+300 Goods Active
+400 Goods Inactive
+500 Travel Active
+600 Travel Active
+;
+run;
+
+Data Purchases;
+Input PurchaseID CustID DealID PurchaseDate Date10. Amount;
+50 1 100 1-1-2016 1
+51 1 300 2-1-2016 1
+52 1 100 5-10-2016 2
+53 2 200 8-8-2016 3
+54 2 100 10-9-2016 1
+55 3 600 10-7-2016 2
+76 4 500 5-5-2016 1
+78 5 200 21-8-2016 2
+79 5 100 4-10-2016 3
+;
+Run;
+
+
+Q1
+SQL
+select DealID,sum(Amount) from Purchases
+where month(PurchaseDate) <=3
+group by DealID
+
+Data SumAmountDeal;
+set Purchases(keep = Deal,Amount)
+
+Proc sort Data=Purchases;
+by DealID;
+run;
+
+Data PurchaseData(keep= DealID, Amount,
+IF month(PurchaseDate)<=3 then sum(Amount)PurchaseData;
+
+
+Q2
+select p.custID from
+Deals  d join purchases p
+on d.dealID=p.dealID
+where d.dealType="Local"
+
+Q6
+select custId from customers where gender="M"
+
+row_number() over(partition by custid
+
+Q3
+
+select top 1 CustId 
+from Customers
+order by Birthdate 
+
+Q4
+select distinct p.custid, d.dealID,
+max(purchaseDate) over (partition by custid) as purchase_date
+from p join d on dealid
+
+
+Q5
+select top 1 custid,dealid,amount 
+from
+(select top 2 custId,dealId,sum(Amount) as amount from p
+group by custId,DealID 
+order by sum(amount) desc) a
+order by a.amount asc
+
+select a.custid,a.dealid,a.amount
+from(
+select custid,dealid,amount,
+dense_rank() over(partiton by custid, dealid order by amount desc) as rk
+from p) a
+where a.rk=2
+
+Q6
+
+select custid,count(distinct dealid),
+max(case when dealid=100 then 1 else 0) as flag_100,
+max(case when dealid=600 then 1 else 0) as flag_600,
+
+from p 
+group by custid,dealid
+having count(dealid)=2 and flag_100=1 and flag_600=0;
+
+
+
