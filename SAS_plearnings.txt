@@ -1,0 +1,361 @@
+q1..diff between class and by...by requires data set to be sorted where as class does nt require it t be sorted 
+proc summary and proc means diff
+
+
+Data Measure;
+infile'D:/Users/jagarwal/Desktop/R_201/Measure_File.csv'
+delimiter=',';
+run;
+
+
+Proc import datafile='Z:\Analytics\Users\jagarwal\workspace\hha_variables2017juhi.csv';
+out=HHA_Variables;
+dbms=csv;
+run;
+/*using inbuilt Sas dataset
+Data CarsJ;
+set sashelp.cars;
+run;
+/*creating data set
+Data Dataset1;
+Input ID $ Name $ Salary Dept $;
+comm=Salary*.2;
+label ID='EmpId' comm='commission';
+Datalines;
+1 juhi 120 HR
+2 Aditi 200 Operations
+3 Arti 300 HR
+4 Rubi 150 HR
+5 Dan 515.2 Operations
+6 Gary 843.25 Finance
+7 Guru 722.5 Finance 
+8 Rick 623.3 IT
+;
+Run;
+/**/
+Data data1;
+set hha_variables2017juhi(obs=1000);
+run;
+
+/*1. subsetting- pick any n rows*/
+data data2;
+set data1(firstobs=5 obs=200);
+run;
+
+data data2a;
+set data1(firstobs=n-200,obs=200);
+run;
+
+/*2b. Proc summary for summary of dataset and proc means*/
+/*in summary we get n,min,max,stdev,mean for all the variables specifies in Var step..if we remove var step from proc summary, it will not show anything */
+/*class and var for grouping...class includes one group of null where as by does not*/
+Proc summary data=data1 ;
+by cat_flag;
+var cig_childrens_wear master_memb_id;
+output out=stats;
+run;
+
+Proc means data=data1 n nmiss min max p1 p99 mean;
+var bonus_mls cig_childrens_wear;
+class cat_flag;
+run;
+
+Proc freq data=data1;
+table cat_flag*resp_flag /nocum nopercent;
+run;
+/*2. filter rows (by condition on columns)*/
+Data data3a data3b data3c;
+set data1;
+if bonus_mls<300 then output data3a;
+else if  bonus_mls>400 then output data3b;
+else output data3c;
+run;
+Data data3d;
+set data1;
+where cat_flag=0 or (cat_flag=1 and resp_flag=1);
+run;
+
+proc print data=data3a;
+run;
+/*3. filter columns(by name)*/
+Data data3;
+Set data1(keep=master_memb_id cat_flag rename=(cat_flag=category_flag));
+run;
+data data3e;
+set data1(drop=ac_mls obs=1000);
+run;
+ data data3f;
+ update data1 (cat_flag=1);
+ where cat_flag=0;
+ run;
+
+  proc sql;
+  update data1
+  set cat_flag=1
+  where cat_flag=0;
+  quit;
+
+  proc freq data=data1;
+  table cig_garden;
+  run;
+  
+/*4. checking null values for intergers, numeric and char*/
+proc sql;
+select 
+sum(case when cig_garden is null then 1 else 0 end) as Nullcount,
+sum(case when cig_garden =. then 1 else 0 end) as Nullcount2,
+sum(case when cig_cluster="" then 1 else 0 end) as Nullcount3,
+sum(case when cig_cluster is null then 1 else 0 end) as Nullcount4
+from data1;
+
+/*5. create additional columns (char, num and date)*/
+data data5(keep=cig_cluster cig1 n5 con Datee day1 month1 year1);
+set data1;
+format cig1 best1.0 con best8.5 n5 $5. Datee yymmdd10. day1 best2.0 month1 best2.0 year1 best4.0;
+if cig_cluster="B" then cig1=1;
+else if cig_cluster="E" then cig1=2;
+else cig1=3;
+n5=5;
+con=5*resp_flag;
+Datee=Today();
+day1=day(Datee);
+month1=month(Datee);
+year1=year(Datee);
+run;
+
+
+
+/*6. sort the data by key*/
+proc sort data=data1;
+by stat_dstnc descending cig_cluster;
+run;
+
+DATA TEMP;
+INPUT ID $ NAME $ SALARY DEPARTMENT $;
+comm=SALARY*0.25;
+LABEL ID='Employee ID' comm='Commision';
+DATALINES;
+1 Juhi 400 IT
+2 Aditi 200 Operations
+3 Arti 300 HR
+4 Rubi 150 HR
+5 Dan 515.2 Operations
+6 Gary 843.25 Finance
+7 Guru 722.5 Finance 
+8 Rick 623.3 IT
+3 Arti 300 HR
+4 Rubi 150 HR
+8 aaa 220 AB
+;
+Run;
+
+/*question to be asked*/
+data filter2;
+set temp;
+if index(name,'juhi')>0 then output filter2;
+run;
+/*finding position of a char in string*/
+data _null_;
+   a = 'ABC.DEF(X=Y)';
+   b = 'X=Y';
+   x = index(a,b);
+   put x=;
+run;
+
+data temp5;
+x=index('juhi','i');
+run;
+
+/*7. remove duplicate rows*/
+proc sort data=temp out=D1 nodupkey;
+by id;
+run;
+
+/*7b. joins*/
+
+Data temp2;
+input dept $ depCode;
+datalines;
+IT 22
+Operations 33
+HR 44
+Finance 55
+IT 44
+AC 89
+;
+run;
+proc sort data=temp;
+by DEPARTMENT;
+run;
+
+proc sort data=temp2;
+by dept;
+run;
+
+Data Mergee1;
+merge temp(in=a keep=name department rename=(department=dept)) temp2(in=b);
+by dept;
+if a and b;
+run;
+
+proc sql;
+create table joinedt as
+select a.name,a.salary,b.dept,b.depcode
+from temp a join temp2 b
+on a.department=b.dept
+;
+quit;
+
+proc sql;
+create table joinedt2 as
+select id,name,department
+from temp
+where department in 
+(select dept from temp2)
+;
+quit;
+
+/*defining lirary*/
+
+libname MyFold "Z:\Analytics\Users\jagarwal\workspace";
+/*8. Aggregation using group by */
+
+/*9. frequency and cross frequency of columns*/
+/*10. transposing*/
+ 
+/*11. create rank by groups of a column*/
+proc rank data=temp out=rkData;
+by department;/*grouping by col*/
+var SAlary;/*col on which rank is to be applied*/
+ranks Rksal;/*rank col name*/
+run;
+/*12. aggregation functions (string and numeric)*/
+/*13. random sampling*/
+/*14. correlation*/
+/*15. proc logistic for regression*/
+/*16. union*/
+Data temp3;
+Input ID $ Name $ Salary Dept2 $;
+Datalines;
+1 juhi 120 HR
+2 Aditi 200 Operations
+9 dlf 999 zqa
+;
+Run;
+data data16;
+set temp(rename=(department=dept2)) temp3;
+run;
+/*17 first.var amd last.var*/
+proc sort data=temp out=data17;
+by department;
+run;
+
+data data18;
+set data17;
+by department;
+if first.department;
+run;
+
+proc print data=data18;
+title 'First Dept';
+run;
+/*when data is sorted it assigns two varibles first.variables and last.variables*/
+/*18 running total*/
+
+data data18a;
+set temp;
+TotalID + Id;
+run;
+
+proc print data=data18a;
+run;
+
+/*printing only the total*/
+data data19(keep=TotalID);
+set data18a;
+if lastobs>0;
+run;
+
+proc print data=data19 output=data20;
+run;
+
+/*Retain*/
+
+proc sort data=temp ;
+by department name;
+run;
+data tempRetain;
+set temp;
+format rk best2.0;
+by department name;
+retain rk;
+if first.department then rk=1;
+else rk=rk+1;
+run;
+
+
+data tempRetain2;
+set temp;
+retain holdComm;
+comms2= salary * 4;
+holdComm=comms2;
+bbc=lag2(salary);
+run;
+
+proc sql;
+create table Group as
+select avg(salary),department
+from temp
+group by department
+order by department desc;
+quit;
+
+data subFnc;
+set temp;
+aa=substr(name,3,-2);
+BB=upcase(Name);
+/*CC= COMPRESS(PHONE,'(-) ');--removing specific char from string*/
+/*input(colname,8.)--converts data type to desired data type*/
+CC=lengthn(name);
+dd=FIND('good good bye', 'bye');
+EE=findc('good','g')
+run;
+proc sort data=data1;
+by cat_flag;
+run;
+/*we use proc survey select to create samples and strata defines on what basis the proportion in training data should be equivalent (in percent) in training data*/
+proc surveyselect data=data1 method=srs n=15 seed=123 out=SurveyData;
+strata cat_flag;
+run;
+/*this one is fr proportions and above for sample of definite size*/
+
+proc surveyselect data=data1 method=srs rate=0.7 seed=123 outall out=SurveyData;
+strata cat_flag;
+run;
+/*proc transpose*/
+data score;
+   input Student $9. StudentID $ Section $ Test1 Test2 Final;
+   datalines;
+Capalleti 0545 1  94 91 87
+Dubose    1252 2  51 65 91
+Engles    1167 1  95 97 97
+Grant     1230 2  63 75 80
+Krupski   2527 2  80 76 71
+Lundsford 4860 1  92 40 86
+McBane    0674 1  75 78 72
+;
+run;
+/*prefix gives the names to the columns after transpose*/
+proc transpose data=score out=transpose1 prefix=student;
+run;
+/*id refers to the column by which you want to transpose Var refers to the columns to be transposed*/
+proc transpose data=score out=transpose2 name=column_transposed;
+id Student;
+run;
+
+proc transpose data=score out=transpose3 name=colTrans;
+var StudentID Test1 Test2;
+id Student;
+run;
+
+

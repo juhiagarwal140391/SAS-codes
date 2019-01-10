@@ -1,0 +1,303 @@
+
+/*sorting */
+proc sort data=hha_variables2017juhi;
+by resp_flag;
+run;
+
+data resp1 resp0;
+set hha_variables2017juhi;
+if resp_flag =1 then output resp1;
+else if resp_flag=0 then output resp0;
+run;
+proc freq data=resp1;
+table resp_flag;
+run;
+
+data resp120;
+set resp1(obs=17123);
+run;
+
+data resp020;
+set resp0(obs=17123);
+run;
+
+data resp;
+set resp120 resp020;
+run;
+
+proc contents data=resp out=cols;
+run;
+/*proc imstat can be used for using col data types*/
+proc imstat;
+    table resp;
+    distinct / temptable;
+run;
+
+%let ContiVar=
+total_expenditure
+avg_income_pop
+cig_food
+cig_hotels_motels
+cig_communications
+cig_garden_supplies_services
+cig_househols_equipments
+household_equipment
+cig_womens_wear
+cig_mens_wear
+cig_childrens_wear
+cig_purchase_auto_trucks
+cig_gasoline_fuels
+cig_maintainence_repair
+cig_public_transportation
+cig_personal_care
+cig_recreation
+cig_toys_hobby_materials
+cig_computer_equipment
+cig_recreation_vehicles
+cig_tobacco_products
+cig_game_of_chance
+cig_retirement_plan
+cig_furn_equip
+cig_garden
+red
+red_air
+red_non_air
+red_other
+red_merchandise
+red_gift_card
+red_mls
+red_air_mls
+red_non_air_mls
+red_other_mls
+wb_clicks
+wb_pgs_your_acc
+wb_pgs_faq
+wb_air_chkout
+wb_flt_srch
+wb_pgs_promo
+wb_pgs_fi
+wb_pgs_trvl
+wb_pgs_retail
+wb_pgs_home
+wb_pgs_hha
+txns_acc
+travel_txn_acc
+retail_txn_acc
+car_txn_acc
+flight_txn_acc
+hotel_txn_acc
+mls
+bonus_mls
+retail_mls
+hha_mls
+esso_mls
+travel_mls
+ac_mls
+car_mls
+hotel_mls;
+%put &ContiVar.;
+
+%let CatgNumVar=
+cat_flag
+resp_flag
+fi_flag
+cig_niche
+nb_prtnr
+nb_prtnr_sector
+nb_prtnr_travel
+nb_prtnr_retail
+retail_enrol_flag;
+%put &CatgNumVar;
+
+%let CatgCharVar=
+cig_cluster
+stat_dstnc;
+%put &CatgCharVar;
+
+data ContinuousD(keep=&ContiVar.) CatgCharD(keep=&CatgCharVar.) CatgNumD(keep=&CatgNumVar.);
+set resp;
+run;
+
+proc means data=ContinuousD mean nmiss min p1 p99 max;
+/*var &ContiVar.;*/
+output out=meansStat1 mean=Mean1 nmiss=missing1 p99=per99 max=max1;
+run;
+
+/* Proc sort data=meansStat;*/
+/* by _stat_;*/
+/* run;*/
+/**/
+/*Proc transpose data=meansStat name= _stat_;*/
+/*id _stat_;*/
+/*run;*/
+/*capping the values by 99percentile value for outliers*/
+Data ContinuousD1;
+set ContinuousD;
+if red> 3 then red=3;
+if red_air> 2 then red_air=2;
+if red_non_air> 0 then red_non_air=0;
+if red_other> 1 then red_other=1;
+if red_merchandise> 0 then red_merchandise=0;
+if red_gift_card> 1 then red_gift_card=1;
+if wb_clicks> 193 then wb_clicks=193;
+if wb_pgs_your_acc> 16 then wb_pgs_your_acc=16;
+if wb_air_chkout> 3 then wb_air_chkout=3;
+if wb_flt_srch> 21 then wb_flt_srch=21;
+if wb_pgs_promo> 3 then wb_pgs_promo=3;
+if wb_pgs_fi> 1 then wb_pgs_fi=1;
+if wb_pgs_trvl> 9 then wb_pgs_trvl=9;
+if wb_pgs_retail> 0 then wb_pgs_retail=0;
+if wb_pgs_hha> 0 then wb_pgs_hha=0;
+if txns_acc> 26 then txns_acc=26;
+if retail_txn_acc> 36 then retail_txn_acc=36;
+if hotel_txn_acc> 1 then hotel_txn_acc=1;
+if mls> 13199 then mls=13199;
+if bonus_mls> 10245 then bonus_mls=10245;
+if retail_mls> 823 then retail_mls=823;
+if esso_mls> 382 then esso_mls=382;
+if travel_mls> 12956 then travel_mls=12956;
+if car_mls> 250 then car_mls=250;
+if hotel_mls> 589 then hotel_mls=589;
+run;
+/*removing null by replacingthem by mean*/
+ data continuousD2;
+ set continuousD1;
+ if total_expenditure=. Then total_expenditure=100493.67;
+if avg_income_pop=. Then avg_income_pop=57517.88;
+if cig_food=. Then cig_food=9914.57;
+if cig_hotels_motels=. Then cig_hotels_motels=623.1302546;
+if cig_communications=. Then cig_communications=2564.17;
+if cig_garden_supplies_services=. Then cig_garden_supplies_services=502.8332013;
+if cig_househols_equipments=. Then cig_househols_equipments=2650.89;
+if household_equipment=. Then household_equipment=1287.21;
+if cig_womens_wear=. Then cig_womens_wear=2630.29;
+if cig_mens_wear=. Then cig_mens_wear=1667.26;
+if cig_childrens_wear=. Then cig_childrens_wear=97.1818114;
+if cig_purchase_auto_trucks=. Then cig_purchase_auto_trucks=5240.69;
+if cig_gasoline_fuels=. Then cig_gasoline_fuels=2995.1;
+if cig_maintainence_repair=. Then cig_maintainence_repair=1333.63;
+if cig_public_transportation=. Then cig_public_transportation=1492.97;
+if cig_personal_care=. Then cig_personal_care=1512.51;
+if cig_recreation=. Then cig_recreation=4960.7;
+if cig_toys_hobby_materials=. Then cig_toys_hobby_materials=176.2432978;
+if cig_computer_equipment=. Then cig_computer_equipment=409.173248;
+if cig_recreation_vehicles=. Then cig_recreation_vehicles=906.9401829;
+if cig_tobacco_products=. Then cig_tobacco_products=1402.04;
+if cig_game_of_chance=. Then cig_game_of_chance=191.2192674;
+if cig_retirement_plan=. Then cig_retirement_plan=3973.96;
+if cig_furn_equip=. Then cig_furn_equip=2650.89;
+if cig_garden=. Then cig_garden=502.8332013;
+run;
+
+proc means data=continuousD2 nmiss mean p99 max;
+run;
+
+proc means data=CatgNumD nmiss mode;
+run;
+
+data CatgNumD1;
+set CatgNumD;
+if cig_niche=. then cig_niche=22;
+run;
+
+proc freq data=CatgCharD;
+table &CatgCharVar;
+run;
+data dataF;
+set CatgNumD1 CatgCharD continuousD2;
+run;
+
+/*Modelling */
+
+/*outlier treatment*/
+data  Dfinal;
+set resp;
+if red> 3 then red=3;
+if red_air> 2 then red_air=2;
+if red_non_air> 0 then red_non_air=0;
+if red_other> 1 then red_other=1;
+if red_merchandise> 0 then red_merchandise=0;
+if red_gift_card> 1 then red_gift_card=1;
+if wb_clicks> 193 then wb_clicks=193;
+if wb_pgs_your_acc> 16 then wb_pgs_your_acc=16;
+if wb_air_chkout> 3 then wb_air_chkout=3;
+if wb_flt_srch> 21 then wb_flt_srch=21;
+if wb_pgs_promo> 3 then wb_pgs_promo=3;
+if wb_pgs_fi> 1 then wb_pgs_fi=1;
+if wb_pgs_trvl> 9 then wb_pgs_trvl=9;
+if wb_pgs_retail> 0 then wb_pgs_retail=0;
+if wb_pgs_hha> 0 then wb_pgs_hha=0;
+if txns_acc> 26 then txns_acc=26;
+if retail_txn_acc> 36 then retail_txn_acc=36;
+if hotel_txn_acc> 1 then hotel_txn_acc=1;
+if mls> 13199 then mls=13199;
+if bonus_mls> 10245 then bonus_mls=10245;
+if retail_mls> 823 then retail_mls=823;
+if esso_mls> 382 then esso_mls=382;
+if travel_mls> 12956 then travel_mls=12956;
+if car_mls> 250 then car_mls=250;
+if hotel_mls> 589 then hotel_mls=589;
+run;
+
+data dfinal2;
+set dfinal;
+if total_expenditure=. Then total_expenditure=100493.67;
+if avg_income_pop=. Then avg_income_pop=57517.88;
+if cig_food=. Then cig_food=9914.57;
+if cig_hotels_motels=. Then cig_hotels_motels=623.1302546;
+if cig_communications=. Then cig_communications=2564.17;
+if cig_garden_supplies_services=. Then cig_garden_supplies_services=502.8332013;
+if cig_househols_equipments=. Then cig_househols_equipments=2650.89;
+if household_equipment=. Then household_equipment=1287.21;
+if cig_womens_wear=. Then cig_womens_wear=2630.29;
+if cig_mens_wear=. Then cig_mens_wear=1667.26;
+if cig_childrens_wear=. Then cig_childrens_wear=97.1818114;
+if cig_purchase_auto_trucks=. Then cig_purchase_auto_trucks=5240.69;
+if cig_gasoline_fuels=. Then cig_gasoline_fuels=2995.1;
+if cig_maintainence_repair=. Then cig_maintainence_repair=1333.63;
+if cig_public_transportation=. Then cig_public_transportation=1492.97;
+if cig_personal_care=. Then cig_personal_care=1512.51;
+if cig_recreation=. Then cig_recreation=4960.7;
+if cig_toys_hobby_materials=. Then cig_toys_hobby_materials=176.2432978;
+if cig_computer_equipment=. Then cig_computer_equipment=409.173248;
+if cig_recreation_vehicles=. Then cig_recreation_vehicles=906.9401829;
+if cig_tobacco_products=. Then cig_tobacco_products=1402.04;
+if cig_game_of_chance=. Then cig_game_of_chance=191.2192674;
+if cig_retirement_plan=. Then cig_retirement_plan=3973.96;
+if cig_furn_equip=. Then cig_furn_equip=2650.89;
+if cig_garden=. Then cig_garden=502.8332013;
+run;
+
+
+data dfinal3;
+set dfinal2;
+if cig_niche=. then cig_niche=22;
+run;
+
+data dfinal4(drop=stat_dstnc cig_cluster);
+set dfinal3;
+If cig_cluster="A" then cig_clEncode=1;
+else If cig_cluster="B" then cig_clEncode=2;
+else If cig_cluster="C" then cig_clEncode=3;
+else If cig_cluster="D" then cig_clEncode=4;
+else If cig_cluster="E" then cig_clEncode=5;
+else If cig_cluster="F" then cig_clEncode=6;
+else If cig_cluster="G" then cig_clEncode=7;
+else If cig_cluster="H" then cig_clEncode=8;
+else If cig_cluster="I" then cig_clEncode=9;
+else If cig_cluster="J" then cig_clEncode=10;
+else If cig_cluster="K" then cig_clEncode=11;
+else If cig_cluster="L" then cig_clEncode=12;
+else If cig_cluster="M" then cig_clEncode=13;
+else If cig_cluster="N" then cig_clEncode=14;
+else If cig_cluster="O" then cig_clEncode=15;
+else If cig_cluster="P" then cig_clEncode=16;
+else If cig_cluster="Q" then cig_clEncode=17;
+else If cig_cluster="" then cig_clEncode=18;
+If stat_dstnc="dBlack" then stat_dstnc_encode=1;
+else If stat_dstnc="dDiamond" then stat_dstnc_encode=2;
+else If stat_dstnc="dSilver" then stat_dstnc_encode=3;
+else If stat_dstnc="Other" then stat_dstnc_encode=4;
+else If stat_dstnc="No Level Distinction" then stat_dstnc_encode=5;
+run;
+

@@ -1,0 +1,14 @@
+
+for labe encoding
+1)either label encoding by giving discrete values to all the categories
+2) looking at the % of that category and then clubbing the same percentages tofether to form one label. % here means % of records of that category in total table. But this can be sometimes misleading so we go one step further
+y it can be misleading?? lets say 
+Cat  %
+A    
+
+we check for respoder %=(total of that category/total records)
+the category % where target for that category is 1 i.e  category(where target==1)/category(total target is 0 or 1)  
+we usually check tis resp_% for small %values
+
+
+age A b c d e f g h gap1 gap2

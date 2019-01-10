@@ -1,0 +1,28 @@
+This example uses the DROP= and RENAME= data set options and the INPUT function to convert the variable POPRANK from character to numeric. The name POPRANK is changed to TEMPVAR before processing so that a new variable POPRANK can be written to the output data set. Note that the variable TEMPVAR is dropped from the output data set and that the new name TEMPVAR is used in the program statements.
+
+data newstate(drop=tempvar);
+   length poprank 8;
+   set state(rename=(poprank=tempvar));
+   poprank=input(tempvar,8.);
+run;
+
+This example uses the DROP statement and the DROP= data set option to control the output of variables to two new SAS data sets. The DROP statement applies to both data sets, CORN and BEAN. You must use the RENAME= data set option to rename the output variables BEANWT and CORNWT in each data set.
+
+data corn(rename=(cornwt=yield) drop=beanwt)
+     bean(rename=(beanwt=yield) drop=cornwt);
+   set harvest;
+   if crop='corn' then output corn;
+   else if crop='bean' then output bean;
+   drop crop;
+run;
+
+This example shows how to use data set options in the DATA statement and the RENAME statement together. Note that the new name QTRTOT is used in the DROP= data set option.
+
+data qtr1 qtr2 ytd(drop=qtrtot);
+   set ytdsales;
+   if qtr=1 then output qtr1;
+   else if qtr=2 then output qtr2;
+   else output ytd;
+   rename total=qtrtot;
+run;
+

@@ -1,0 +1,202 @@
+/*Input data-Data1 with features (X) and target (Y)*/
+/*1. BALANCING DATASET FOR RESPONDERS AND NON RESPONDERS*/
+/*2. DATA CLEANSING */
+/*   2.A CATEGORICAL NUMERICAL VAR:-REPLACE MISSING BY MODE. NO CAPPING REQUIRED*/
+/*   2.B CATEGORICAL CHARACTER VAR:-LABEL ENCODE OR ONE-HOT-ENCODE . TO REMOVE MISSING EITHER CREATE NEW LABEL OR*/
+/*   NEW COLUMN WITH FLAG. NO CAPPING REQUIRED*/
+/*   2.C NUMERICAL VAR: REPLACE MISSING BY MEAN AND CAP BY 99TH PERCENTILE VALUE*/
+/*3. FEATURE SELECTION*/
+/*   3.A IV CALCULATION- FOR NUM- DO BINNING BASED ON DECILES TO CALCULATE IV*/
+/*   3.B PEARSON CORLATION B/W EACH PAIR OF NUMERICAL VARS (SELECT ONLY ONE AMONG THE PAIR WITH HIGH CORR)*/
+/*   4.C CHECK MULTICOLLINEARITY FOR ALL VARS BASED ON VIF (LIN. REGRESSION)*/
+/*4. RUN MODEL AND TUNE MODELBY REMOVING INSIGNIFICANT FEATURES (WALD CHI-SQAURE)*/
+/*5. VALIDATE MODEL- PRECISION, ACCURACY, RECALL, ROC*/
+
+/*********************1. BALANCING DATASET FOR RESPONDERS AND NON RESPONSERS*************************/
+
+proc contents data=d2;
+run;
+
+/*sorting */
+proc sort data=hha_variables2017juhi;
+by resp_flag;
+run;
+
+data resp1 resp0;
+set hha_variables2017juhi;
+if resp_flag =1 then output resp1;
+else if resp_flag=0 then output resp0;
+run;
+proc freq data=resp0;
+table resp_flag;
+run;
+
+data resp120;
+set resp1(obs=15000);
+run;
+
+data resp020;
+set resp0(obs=15000);
+run;
+
+proc append base=resp120 data=resp020;
+run;
+
+data resp;
+set resp120 resp020;
+run;
+
+/*********************1. DATA CLEANSING*************************/
+
+/*selecting few columns or features*/
+data d3;
+set resp(keep=cig_cluster cat_flag resp_flag fi_flag avg_income_pop wb_pgs_hha mls 
+cig_gasoline_fuels cig_househols_equipments);
+run;
+proc freq data=d3;
+table cig_cluster;
+run;
+/*if categorical numeric has missing values..we can either remove thoe records or replace the value by mode of the column */
+/*if categorical char has missing vales "" then we can either remove those records or replace by creating labels..check for freq of 0 and 1 by proc freq and then replace nul by that flag*/
+
+/*Data cleaning-Outliers and missing value treatment*/
+
+/*2A CATEGORICAL NUMERICAL VARIABLES: REPLACE MISSING BY MODE*/
+proc means data=d3 nmiss;
+var cat_flag resp_flag fi_flag;
+run;
+data d4;
+set d3;
+if cat_flag=. then cat_flag=1;
+run;
+
+/*2B CATEGORICAL CHAR VARIABLES: LABEL ENCODING AND VREATE NEW CATEGORY FOR MISSIN VALUES OF EVERY VAR*/
+/*changing categorical missing valu from cig_cluster*/
+/*labeling of categorical vars*/
+data Data1(drop=cig_cluster rename=(resp_flag=target));
+set d3;
+if cig_cluster ='A' then cig_cluster_n=1;
+else if cig_cluster ='B' then cig_cluster_n=2;
+else if cig_cluster='G' then cig_cluster_n=3;
+else if cig_cluster='E' then cig_cluster_n=4;
+else if cig_cluster="" then cig_cluster_n=5;
+else cig_cluster_n=6;
+run;
+
+/*2C CONTINUOUS NUMERICAL VARS: CAPPING BASED ON 99th PERCENTILE AND REPLCAE MISSING BY MEAN*/
+/*checking for missing val,mean min max percentiles of numeric continuous vriables to treat the outliers and missing values*/
+
+Proc means data=data2 min p1 mean p99 max nmiss;
+var avg_income_pop wb_pgs_hha mls cig_gasoline_fuels cig_househols_equipments;
+run;
+
+Data data2;
+set data1;
+if mls>13274 then mls=13274;/*first you need to remove outliers*/
+if avg_income_pop=. then avg_income_pop=57625.65;/*replacing null values by mean*/
+if cig_gasoline_fuels=. then cig_gasoline_fuels=2998.36;
+if cig_househols_equipments=. then cig_househols_equipments=2651.21;
+run;
+
+Proc freq data=data2;
+table cat_flag*target cig_cluster_n*target fi_flag*target /norow nocol nopercent;
+run;
+
+/*********************3. FEATURE SELECTION*************************/
+
+/*3A. IV*/
+/*calculated IV for categorical vars ..fi_flag is removed because the iv value is very less*/
+/*further we did the binning of the continuous variables and calculated the IV*/
+
+/*3B. Correlation for contiuous variables*/
+/*checking correlation between variables and then selecting out of them which is more corelated with target variable*/
+
+proc corr data=data2 pearson;
+/*   var  sepallength sepalwidth;*/
+run;
+
+/*3C. Multi collinearity b/w continuos variables using VIF*/
+%let var=
+cig_cluster_n
+cat_flag
+fi_flag
+avg_income_pop
+wb_pgs_hha
+mls 
+cig_gasoline_fuels
+cig_househols_equipments;
+%put &var.;
+
+proc reg data=data2;
+      model target=&var.
+            / tol vif collin;
+   run;
+
+/*********************4. MODEL BUILDING*************************/
+/*creating training and test data*/
+/*this should be done before feature selection*/
+proc sort data=data2;
+by target;
+run;
+
+proc surveyselect data=data2 rate=.7 method=srs seed=234 outall;
+strata target;
+run;
+
+data trainD(drop=selected selectionprob samplingweight) testD(drop=selected selectionprob samplingweight);
+set data3;
+if selected=1 then output trainD;
+else output testD;
+run;
+
+%let var2=
+cig_cluster_n
+cat_flag
+fi_flag
+avg_income_pop
+wb_pgs_hha
+mls 
+cig_gasoline_fuels
+;
+%put &var2.;
+proc logistic data=traind outest=betas covout outmodel=model1;
+model target(event='1')=&var2.
+/*/selection=stepwise slentry=0.3 slstay=0.35*/
+;
+output out=pred_train p=phat; score data=testD out=pred_test; 
+run;
+
+/*improve the model by */
+/*a. remove vars with p_val > 5% */
+/*b. remove vars with lowest wald chi sq* we are removing htese variables bcz maybe the var may have multicollinearity and they are adding noise/
+/*c.Add new features which are having good correlation with the target*/
+/*d. do feature engineering(i.e. do transformations like log...multiply etc) of existing vars*/
+/*e.concordance = % of pairs where probability of target=1(responders) is greater than that of target=0(non responders)*/
+
+/*scoring on test data*/
+/*proc logistic inmodel=model1;*/
+/*score data=testD1;*/
+/*run;*/
+
+/*********************5. MODEL VALIDATION*************************/
+/*   5A. ACCURACY, PRECION , RECALL, F1 SCORE*/
+data pred_train1;
+set pred_train(keep=target phat);
+if phat>0.5 then pred=1;else pred=0;
+run;
+
+data pred_test1;
+set pred_test(keep=target P_1);
+if P_1>0.5 then pred=1;else pred=0;
+run;
+
+proc freq data=pred_test1;
+tables target*pred/norow nocol nopercent;
+run;
+proc freq data=pred_train1;
+tables target*pred/norow nocol  nopercent;
+run;
+
+/*   5B. ROC*/
+
+/*   5C. KS-STATISTIC*/

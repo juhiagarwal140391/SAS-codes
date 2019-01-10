@@ -1,0 +1,138 @@
+DATA TEMP;
+INPUT ID $ NAME $ SALARY DEPARTMENT $;
+comm=SALARY*0.25;
+LABEL ID='Employee ID' comm='Commision';
+DATALINES;
+1 Juhi 400 IT
+2 Aditi 200 Operations
+3 Arti 300 HR
+4 Rubi 150 HR
+5 Dan 515.2 Operations
+6 Gary 843.25 Finance
+7 Guru 722.5 Finance 
+8 Rick 623.3 IT
+;
+Run;
+proc means;
+run;
+proc print data=TEMP;
+where SAlary > 400;
+RUN;
+/*selecting particular columns from a table temp and populating in temp1*/
+data Temp1;
+set Temp(keep=NAME SALARY);
+run;
+data temp2(keep=Name Salary);/*another way of selecting particular columns*/
+set Temp;
+run;
+/*dropping columns*/
+data temp3;
+set Temp(drop= Department);
+run;
+
+
+/*filtering data*/
+proc print data=Temp1;
+where salary> 500;
+run;
+
+Data cars1(drop=HP);
+Length HorsePower 8;
+set sashelp.cars(rename=(HorsePower=HP));
+HorsePower=input(HP,$8.);
+rename HrP=HorsePower;
+run;
+Data carss;
+set sashelp.cars;
+run;
+Data string_ex;
+length string1 $8;
+string1='abcdef  ';
+/*example of string functions*/
+subOfString=substrn(string1,1,5);
+lenOfString=lengthc(string1);
+LenWithoutSpace=lengthc(trim(string1));
+run;
+proc print data=string_ex;
+run;
+DATA array_example;
+INPUT a1 $ a2 $ a3 $ a4 $ a5 $;
+ARRAY colours(5) $ a1-a5;
+mix = a1||'+'||a2;
+DATALINES;
+yello pink orange green blue
+;
+RUN;
+PROC PRINT DATA=array_example;
+RUN;
+DATA array_example_OF;
+	INPUT A1 A2 A3 A4;
+	ARRAY A{4} A1-A4;
+	A_SUM=SUM(OF A(*));
+	A_MEAN=MEAN(OF A(*));
+	A_MIN=MIN(OF A(*));
+	DATALINES;
+	21 4 52 11
+	96 25 42 6
+	;
+	RUN;
+	PROC PRINT DATA=array_example_OF;
+	RUN;
+	DATA array_in_example;
+	INPUT A1 $ A2 $ A3 $ A4 $;
+	ARRAY COLOURS(4) A1-A4;
+	IF 'yellow' IN COLOURS THEN available='Yes';ELSE available='No';
+	DATALINES;
+	Orange pink violet yellow
+	;
+	RUN;
+	PROC PRINT DATA=array_in_example;
+	RUN;
+	DATA MYDATA1;
+input x 6.; /*maxiiuum width of the data*/
+format x 6.3;
+datalines;
+8722
+93.2
+.1122
+15.116
+PROC PRINT DATA = MYDATA1;
+RUN;
+data trunc_functions;
+
+/* Nearest greatest integer */
+ceil_ = CEIL(11.25);
+  
+/* Nearest greatest integer */
+floor_ = FLOOR(11.25);
+  
+/* Integer portion of a number */
+int_ = INT(32.61);
+  
+/* Round off to nearest value */
+round_ = ROUND(5621.58);
+run;
+
+proc print data = trunc_functions noobs;
+run;
+
+DATA Employee; 
+  INPUT empid name $ salary DEPT $ ; 
+
+DATALINES; 
+1 Rick 623.3 IT 		 
+2 Dan 515.2 OPS
+3 Mike 611.5 IT 	
+4 Ryan 729.1 HR 
+5 Gary 843.25 FIN 
+6 Tusar 578.6 IT 
+7 Pranab 632.8 OPS
+8 Rasmi 722.5 FIN 
+;
+proc format;
+value $DEP 'IT' = 'Information Technology'
+      'OPS'= 'Operations' ;
+RUN;
+ PROC PRINT DATA=Employee; 
+ format name $upcase9. DEPT $DEP.; 
+RUN; 
